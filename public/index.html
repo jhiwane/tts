@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTS Unlimited - Multi Key</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f4f4f4; }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        textarea { width: 100%; height: 200px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; margin-bottom: 10px; resize: vertical; box-sizing: border-box; }
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; }
+        select, button { padding: 10px 15px; border-radius: 5px; border: 1px solid #ccc; cursor: pointer; }
+        button { background: #0070f3; color: white; border: none; font-weight: bold; flex-grow: 1; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        button:hover:not(:disabled) { background: #0051a2; }
+        .status { text-align: center; margin-top: 10px; font-size: 0.9em; color: #666; }
+        .audio-container { margin-top: 20px; text-align: center; display: none; }
+        audio { width: 100%; margin-bottom: 10px; }
+        .download-btn { background: #28a745; display: inline-block; text-decoration: none; color: white; padding: 10px 20px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🔊 Generator Suara AI (Multi-Key)</h1>
+    
+    <div class="controls">
+        <select id="voiceSelect">
+            <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Cewek Bule)</option>
+            <option value="ErXwobaYiN019Pky1sPO">Antoni (Cowok Wibawa)</option>
+            <option value="AZnzlk1XvdvUeBnXmlld">Domi (Cewek Kuat)</option>
+            </select>
+    </div>
+
+    <textarea id="textInput" placeholder="Tulis atau paste teks panjang di sini (Max 5000 karakter)..."></textarea>
+    <div style="text-align: right; font-size: 12px; color: #888; margin-bottom: 10px;">
+        <span id="charCount">0</span>/5000 Karakter
+    </div>
+
+    <button id="generateBtn" onclick="generateAudio()">🎵 GENERATE SUARA</button>
+    <div id="statusText" class="status"></div>
+
+    <div class="audio-container" id="resultArea">
+        <audio id="audioPlayer" controls></audio> <br>
+        <a id="downloadLink" class="download-btn">⬇️ Download MP3</a>
+    </div>
+</div>
+
+<script>
+    const textInput = document.getElementById('textInput');
+    const statusText = document.getElementById('statusText');
+    const resultArea = document.getElementById('resultArea');
+    const audioPlayer = document.getElementById('audioPlayer');
+    const charCount = document.getElementById('charCount');
+
+    // 1. LOCAL STORAGE: Load draft saat halaman dibuka
+    window.onload = () => {
+        const savedText = localStorage.getItem('tts_draft');
+        if (savedText) textInput.value = savedText;
+        updateCount();
+    };
+
+    // 2. LOCAL STORAGE: Save otomatis saat ngetik
+    textInput.addEventListener('input', () => {
+        localStorage.setItem('tts_draft', textInput.value);
+        updateCount();
+    });
+
+    function updateCount() {
+        charCount.innerText = textInput.value.length;
+    }
+
+    // 3. FUNGSI UTAMA GENERATE
+    async function generateAudio() {
+        const text = textInput.value;
+        const voiceId = document.getElementById('voiceSelect').value;
+
+        if (!text) return alert("Teks tidak boleh kosong!");
+        if (text.length > 5000) return alert("Teks terlalu panjang! Maksimal 5000 karakter.");
+
+        // UI Loading
+        const btn = document.getElementById('generateBtn');
+        btn.disabled = true;
+        btn.innerText = "⏳ Sedang Memproses (Mencari Kunci Aktif)...";
+        statusText.innerText = "Sistem sedang mencoba beberapa akun API secara bergantian...";
+        resultArea.style.display = 'none';
+
+        try {
+            // Panggil API Vercel kita sendiri
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text, voice_id: voiceId })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || "Gagal generate");
+            }
+
+            // Proses Audio Blob
+            const blob = await response.blob();
+            const audioUrl = URL.createObjectURL(blob);
+
+            // Tampilkan Hasil
+            audioPlayer.src = audioUrl;
+            audioPlayer.play();
+            
+            const downloadLink = document.getElementById('downloadLink');
+            downloadLink.href = audioUrl;
+            downloadLink.download = `voice-${Date.now()}.mp3`;
+
+            resultArea.style.display = 'block';
+            statusText.innerText = "✅ Berhasil! Audio siap diputar.";
+
+        } catch (error) {
+            alert("Error: " + error.message);
+            statusText.innerText = "❌ Gagal: " + error.message;
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "🎵 GENERATE SUARA";
+        }
+    }
+</script>
+
+</body>
+</html>
