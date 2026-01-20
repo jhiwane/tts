@@ -1,100 +1,144 @@
 // api/generate.js
-
-// Menggunakan 'require' agar kompatibel penuh dengan Node.js di Vercel
+// Menggunakan 'require' agar kompatibel penuh dengan Vercel & Node.js
 const axios = require('axios');
+const { MsEdgeTTS, OUTPUT_FORMAT } = require('ms-edge-tts');
 
 module.exports = async (req, res) => {
-  // 1. KEAMANAN: Hanya izinkan method POST
+  // 1. KEAMANAN & VALIDASI
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed. Use POST.' });
   }
 
-  // Ambil data yang dikirim dari Frontend
-  const { text, voice_id } = req.body;
+  const { text, voice_id, provider, user_api_key } = req.body;
 
-  // Validasi input sederhana
   if (!text) {
     return res.status(400).json({ error: 'Teks tidak boleh kosong.' });
   }
 
-  // 2. AMBIL KUNCI DARI ENVIRONMENT VARIABLES
-  let apiKeys = [];
   try {
-    // Membaca array kunci dari Settings Vercel
-    apiKeys = JSON.parse(process.env.ELEVENLABS_KEYS || '[]');
-  } catch (e) {
-    console.error("Format ENV Salah:", e);
-    return res.status(500).json({ error: "Format API Key di server salah. Harus JSON Array." });
-  }
-
-  // Cek apakah kunci tersedia
-  if (apiKeys.length === 0) {
-    return res.status(500).json({ error: "Tidak ada API Key yang ditemukan di Settings Vercel." });
-  }
-
-  // 3. LOGIKA ESTAFET (ROTASI KUNCI)
-  // Kita akan mencoba kunci satu per satu sampai berhasil
-  let lastError = null;
-
-  for (let i = 0; i < apiKeys.length; i++) {
-    const currentKey = apiKeys[i];
-    console.log(`🔄 Mencoba Key ke-${i + 1} (ID: ...${currentKey.slice(-4)})`);
-
-    try {
-      // --- REQUEST KE ELEVENLABS ---
-      const response = await axios.post(
-        `https://api.elevenlabs.io/v1/text-to-speech/${voice_id || 'pNInz6obpgDQGcFmaJgB'}`, // Default ke Adam jika ID kosong
-        {
-          text: text,
-          model_id: "eleven_multilingual_v2", // Model terbaik untuk Bahasa Indonesia
-          voice_settings: {
-            stability: 0.40,       // Agak rendah (0.4) agar lebih ekspresif/beremosi
-            similarity_boost: 0.75,// Menjaga kemiripan suara
-            style: 0.50,           // Menambah gaya bicara (v2 only)
-            use_speaker_boost: true // Meningkatkan kejernihan volume
-          }
-        },
-        {
-          headers: {
-            'xi-api-key': currentKey,
-            'Content-Type': 'application/json'
-          },
-          responseType: 'arraybuffer' // PENTING: Menerima data sebagai file audio (biner)
-        }
-      );
-
-      // --- JIKA SUKSES ---
-      console.log(`✅ Berhasil dengan Key ke-${i + 1}!`);
+    // ============================================================
+    // OPSI A: PROVIDER GRATIS (EDGE TTS - MICROSOFT)
+    // ============================================================
+    if (provider === 'edge') {
+      console.log(`🎤 Mode: Edge TTS (Gratis Unlimited) - Voice: ${voice_id}`);
       
-      // Kirim audio balik ke Frontend
+      const tts = new MsEdgeTTS();
+      
+      // Menggunakan format audio kualitas tinggi
+      await tts.setMetadata(voice_id, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+      
+      // Generate Stream
+      const filePath = await tts.toStream(text);
+      
+      // Kirim langsung ke frontend sebagai stream audio
       res.setHeader('Content-Type', 'audio/mpeg');
-      return res.send(response.data);
+      return filePath.pipe(res);
+    }
 
-    } catch (error) {
-      // --- JIKA GAGAL ---
-      const status = error.response?.status;
-      const message = error.response?.data?.detail?.message || error.message;
+    // ============================================================
+    // OPSI B: PROVIDER PREMIUM (ELEVENLABS)
+    // ============================================================
+    else if (provider === 'elevenlabs') {
+      console.log("🎤 Mode: ElevenLabs Premium");
 
-      console.error(`❌ Key ke-${i + 1} Gagal. Status: ${status}. Pesan: ${message}`);
-      lastError = message;
+      // --- LOGIKA MENENTUKAN KUNCI API ---
+      let apiKeys = [];
 
-      // Cek apakah errornya karena KUOTA HABIS (429) atau KUNCI MATI (401)
-      if (status === 401 || status === 429) {
-        console.log("⚠️ Ganti ke kunci berikutnya...");
-        continue; // Lanjut loop ke kunci berikutnya (i++)
-      } else {
-        // Jika errornya BUKAN masalah kuota (misal Teks kepanjangan, Server Down), berhenti mencoba.
-        return res.status(status || 500).json({ 
-          error: "Terjadi kesalahan pada ElevenLabs.", 
-          details: message 
+      // Skenario 1: User bawa kunci sendiri (Prioritas Utama)
+      if (user_api_key && user_api_key.length > 10) {
+        console.log("👉 Menggunakan API Key dari User.");
+        apiKeys = [user_api_key];
+      } 
+      // Skenario 2: User tidak bawa kunci, gunakan cadangan Server (Multi-Key Rotation)
+      else {
+        console.log("👉 Menggunakan Multi-Key Rotation dari Server.");
+        try {
+          apiKeys = JSON.parse(process.env.ELEVENLABS_KEYS || '[]');
+        } catch (e) {
+          console.error("Format ENV Error:", e);
+        }
+      }
+
+      if (apiKeys.length === 0) {
+        return res.status(401).json({ 
+          error: "Tidak ada API Key tersedia. Masukkan Key Anda sendiri atau atur server keys." 
         });
       }
-    }
-  }
 
-  // 4. JIKA SEMUA KUNCI SUDAH DICOBA DAN GAGAL
-  return res.status(503).json({ 
-    error: "Semua Kuota API Key Habis! Silakan tambah akun baru.",
-    last_error: lastError
-  });
+      // --- LOOPING / ROTASI KUNCI (ESTAFET SYSTEM) ---
+      let lastError = null;
+
+      for (let i = 0; i < apiKeys.length; i++) {
+        const currentKey = apiKeys[i];
+        const isUserKey = (apiKeys.length === 1 && user_api_key); // Cek apakah ini key user
+        
+        console.log(`🔄 Mencoba Request ElevenLabs... (Percobaan ${i + 1})`);
+
+        try {
+          const response = await axios.post(
+            `https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`,
+            {
+              text: text,
+              model_id: "eleven_multilingual_v2", // Model terbaik Bahasa Indonesia
+              voice_settings: {
+                // SETTINGAN KHUSUS AGAR REALISTIS & MANUSIAWI
+                stability: 0.40,       // Agak rendah (0.4) agar lebih emosional/tidak robot
+                similarity_boost: 0.75,// Menjaga kemiripan karakter suara
+                style: 0.50,           // (V2 Only) Menambah gaya bicara natural
+                use_speaker_boost: true // Meningkatkan volume dan kejelasan
+              }
+            },
+            {
+              headers: {
+                'xi-api-key': currentKey,
+                'Content-Type': 'application/json'
+              },
+              responseType: 'arraybuffer' // PENTING: Terima sebagai file audio
+            }
+          );
+
+          // JIKA SUKSES
+          console.log("✅ Berhasil Generate via ElevenLabs!");
+          res.setHeader('Content-Type', 'audio/mpeg');
+          return res.send(response.data);
+
+        } catch (error) {
+          // JIKA GAGAL
+          const status = error.response?.status;
+          const message = error.response?.data?.detail?.message || error.message;
+          console.error(`❌ Gagal. Status: ${status}. Pesan: ${message}`);
+          
+          lastError = message;
+
+          // Jika ini Key User sendiri, jangan rotasi, langsung error
+          if (isUserKey) {
+             return res.status(status || 500).json({ error: "API Key Anda bermasalah/habis kuota." });
+          }
+
+          // Jika Key Server Habis Kuota (429) atau Mati (401), lanjut loop ke key berikutnya
+          if (status === 401 || status === 429) {
+            continue; 
+          } else {
+            // Error lain (misal teks kepanjangan), stop loop
+            return res.status(status || 500).json({ error: "ElevenLabs Error: " + message });
+          }
+        }
+      }
+
+      // Jika loop selesai tapi tidak ada yang berhasil
+      return res.status(503).json({ 
+        error: "Semua kuota Server habis. Silakan gunakan API Key Anda sendiri.",
+        details: lastError
+      });
+    }
+    
+    // Jika Provider tidak dikenali
+    else {
+      return res.status(400).json({ error: "Provider suara tidak valid." });
+    }
+
+  } catch (globalError) {
+    console.error("Critical Error:", globalError);
+    return res.status(500).json({ error: "Internal Server Error: " + globalError.message });
+  }
 };
