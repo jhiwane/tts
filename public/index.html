@@ -3,179 +3,391 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Studio - Unlimited & Premium</title>
+    <title>Crystal Voice Studio - Ultimate</title>
     <style>
         :root {
             --primary: #00d2ff;
             --secondary: #3a7bd5;
-            --bg-dark: #0f0c29;
-            --glass: rgba(255, 255, 255, 0.08);
+            --glass: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+            --text: #ffffff;
         }
+
         body {
-            margin: 0; padding: 0;
-            background: linear-gradient(to bottom right, #141E30, #243B55);
-            font-family: 'Segoe UI', sans-serif;
-            color: white;
+            margin: 0;
+            padding: 0;
+            background: #0f0c29;
+            background: linear-gradient(to right, #24243e, #302b63, #0f0c29);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text);
+            overflow-x: hidden;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
+
+        /* Background Animation Canvas */
+        #canvas-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
         .container {
-            width: 90%;
-            max-width: 600px;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 40px;
             background: var(--glass);
-            backdrop-filter: blur(15px);
-            padding: 30px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            position: relative;
+            z-index: 10;
         }
-        h1 { text-align: center; margin-bottom: 5px; font-weight: 300; letter-spacing: 2px; }
-        p.sub { text-align: center; color: #aaa; margin-bottom: 30px; font-size: 0.9em; }
-        
-        label { display: block; margin: 15px 0 5px; color: #ccc; font-size: 0.9em; }
-        select, textarea, input {
-            width: 100%; padding: 12px;
-            background: rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 8px;
-            color: white; font-size: 16px;
-            box-sizing: border-box;
+
+        h1 {
+            text-align: center;
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #00d2ff, #928DAB);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #aaa;
+            font-size: 0.9em;
+            margin-bottom: 40px;
+        }
+
+        /* Form Elements */
+        .group { margin-bottom: 25px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #ccc; font-size: 0.9em; }
+
+        select, input, textarea {
+            width: 100%;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
             outline: none;
+            transition: 0.3s;
+            box-sizing: border-box;
         }
-        select option { background: #141E30; }
-        
-        .api-box {
-            display: none; /* Hidden by default */
-            background: rgba(255, 193, 7, 0.1);
-            padding: 15px; border-radius: 8px;
-            border: 1px dashed #ffc107;
-            margin-top: 10px;
+
+        select:focus, input:focus, textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);
         }
+
+        select option {
+            background: #141E30;
+            color: white;
+            padding: 10px;
+        }
+
+        /* Toggle API Key Section */
+        #apiKeySection {
+            display: none; /* Default hidden */
+            background: rgba(255, 200, 0, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px dashed rgba(255, 215, 0, 0.3);
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
         button {
-            margin-top: 25px;
-            width: 100%; padding: 15px;
+            width: 100%;
+            padding: 18px;
             background: linear-gradient(45deg, var(--secondary), var(--primary));
-            border: none; border-radius: 10px;
-            color: white; font-size: 18px; font-weight: bold;
-            cursor: pointer; transition: 0.3s;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
-        button:hover { transform: scale(1.02); box-shadow: 0 0 15px var(--primary); }
-        button:disabled { background: #555; transform: none; cursor: not-allowed; }
 
-        .result-area { margin-top: 25px; text-align: center; display: none; }
-        audio { width: 100%; margin-bottom: 10px; }
-        .dl-btn { color: var(--primary); text-decoration: none; border: 1px solid var(--primary); padding: 8px 20px; border-radius: 20px; display: inline-block; margin-top: 5px; }
-        .dl-btn:hover { background: var(--primary); color: white; }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 210, 255, 0.3);
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Audio Player Styling */
+        .result-box {
+            margin-top: 30px;
+            text-align: center;
+            display: none;
+            background: rgba(0,0,0,0.2);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid var(--border);
+        }
+        
+        audio {
+            width: 100%;
+            height: 40px;
+            margin-bottom: 15px;
+        }
+        
+        .download-btn {
+            display: inline-block;
+            text-decoration: none;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            padding: 10px 30px;
+            border-radius: 30px;
+            transition: 0.3s;
+            font-weight: bold;
+        }
+        
+        .download-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #888;
+        }
     </style>
 </head>
 <body>
 
+<canvas id="canvas-bg"></canvas>
+
 <div class="container">
-    <h1>Crystal Voice</h1>
-    <p class="sub">Generator Suara AI Unlimited & Premium</p>
+    <h1>Crystal Voice Studio</h1>
+    <p class="subtitle">Ultimate AI Text-to-Speech Generator</p>
 
-    <label>Pilih Suara:</label>
-    <select id="voiceSelect" onchange="checkProvider()">
-        <optgroup label="🚀 GRATIS & UNLIMITED (Mbak Google/TikTok)">
-            <option value="id-ID-GadisNeural" data-provider="edge">🇮🇩 Gadis (Cewek Halus - Recommended)</option>
-            <option value="id-ID-ArdiNeural" data-provider="edge">🇮🇩 Ardi (Cowok Berita)</option>
-            <option value="en-US-JennyNeural" data-provider="edge">🇺🇸 Jenny (English US)</option>
-            <option value="en-US-GuyNeural" data-provider="edge">🇺🇸 Guy (English Male)</option>
-        </optgroup>
-        <optgroup label="💎 PREMIUM (Butuh API Key)">
-            <option value="pNInz6obpgDQGcFmaJgB" data-provider="elevenlabs">⭐ Adam (Narator Berat)</option>
-            <option value="21m00Tcm4TlvDq8ikWAM" data-provider="elevenlabs">⭐ Rachel (Storytelling)</option>
-            <option value="ErXwobaYiN019Pky1sPO" data-provider="elevenlabs">⭐ Antoni (Formal)</option>
-        </optgroup>
-    </select>
+    <div class="group">
+        <label>Pilih Suara / Voice Model</label>
+        <select id="voiceSelect" onchange="checkVoiceType()">
+            <optgroup label="🚀 GRATIS (Google Translate - Unlimited)">
+                <option value="id" data-provider="google">🇮🇩 Indonesia (Mbak Google)</option>
+                <option value="en" data-provider="google">🇺🇸 Inggris (US)</option>
+                <option value="jw" data-provider="google">🟤 Jawa (Javanese)</option>
+                <option value="su" data-provider="google">🟢 Sunda (Sundanese)</option>
+            </optgroup>
 
-    <div id="apiKeyBox" class="api-box">
-        <label style="margin-top:0">🔑 Masukkan API Key ElevenLabs (Opsional):</label>
-        <input type="password" id="userApiKey" placeholder="sk_... (Biarkan kosong jika ingin pakai server gratis)">
-        <small style="color:#aaa; font-size:12px;">*Jika kosong, sistem akan mencoba menggunakan kuota server bersama.</small>
+            <optgroup label="💎 PREMIUM (ElevenLabs - Realistis)">
+                <option value="pNInz6obpgDQGcFmaJgB" data-provider="elevenlabs">👨 Adam (Deep Narrator - Populer)</option>
+                <option value="21m00Tcm4TlvDq8ikWAM" data-provider="elevenlabs">👩 Rachel (Clear & Calm)</option>
+                <option value="ErXwobaYiN019Pky1sPO" data-provider="elevenlabs">👨 Antoni (News Anchor)</option>
+                <option value="TxGEqnHWrfWFTfGW9XjX" data-provider="elevenlabs">👨 Josh (Deep & Soft)</option>
+                <option value="VR6AewLTigWg4xSOukaG" data-provider="elevenlabs">👨 Arnold (American Voice)</option>
+                <option value="AZnzlk1XvdvUeBnXmlld" data-provider="elevenlabs">👩 Domi (Strong Female)</option>
+                <option value="EXAVITQu4vr4xnSDxMaL" data-provider="elevenlabs">👩 Bella (Serious)</option>
+                <option value="MF3mGyEYCl7XYWbV9V6O" data-provider="elevenlabs">👩 Elli (Young & Energetic)</option>
+                <option value="ThT5KcBeYPX3keUQqHPh" data-provider="elevenlabs">👩 Dorothy (British/Polite)</option>
+                <option value="ODq5zmih8GrVes37Dizj" data-provider="elevenlabs">👨 Patrick (Energetic Shout)</option>
+            </optgroup>
+        </select>
     </div>
 
-    <label>Teks:</label>
-    <textarea id="textInput" rows="5" placeholder="Ketik teks di sini... (Untuk mode Gratis bisa panjang sepuasnya)"></textarea>
+    <div id="apiKeySection" class="group">
+        <label>🔑 API Key ElevenLabs (Opsional)</label>
+        <input type="password" id="userApiKey" placeholder="sk_... (Biarkan kosong jika ingin pakai Kuota Server Gratis)">
+        <small style="color: #bbb; display: block; margin-top: 5px;">
+            *Jika kosong, sistem akan mencoba menggunakan akun bersama (Shared Keys).
+        </small>
+    </div>
 
-    <button id="generateBtn" onclick="generateVoice()">✨ GENERATE SUARA</button>
-    <p id="status" style="text-align:center; font-size:14px; color:#888; margin-top:10px;"></p>
+    <div class="group">
+        <label>Naskah / Teks</label>
+        <textarea id="textInput" rows="6" placeholder="Ketik narasi Anda di sini..."></textarea>
+        <div style="text-align: right; font-size: 12px; color: #888; margin-top: 5px;">
+            <span id="charCount">0</span> Karakter
+        </div>
+    </div>
 
-    <div id="resultArea" class="result-area">
+    <button id="generateBtn" onclick="generateAudio()">✨ Generate Voice</button>
+    <div id="statusText" class="status"></div>
+
+    <div class="result-box" id="resultArea">
         <audio id="audioPlayer" controls></audio><br>
-        <a id="downloadLink" class="dl-btn" download>⬇ Download MP3</a>
+        <a id="downloadLink" class="download-btn" download>⬇ Download MP3</a>
     </div>
 </div>
 
 <script>
-    const voiceSelect = document.getElementById('voiceSelect');
-    const apiKeyBox = document.getElementById('apiKeyBox');
+    // --- 1. ANIMASI LATAR BELAKANG (ANGEL LINES / CRYSTAL) ---
+    const canvas = document.getElementById("canvas-bg");
+    const ctx = canvas.getContext("2d");
+    let particles = [];
 
-    // Cek apakah user pilih Gratis atau Premium
-    function checkProvider() {
-        const option = voiceSelect.options[voiceSelect.selectedIndex];
-        const provider = option.getAttribute('data-provider');
-        if (provider === 'elevenlabs') {
-            apiKeyBox.style.display = 'block';
-        } else {
-            apiKeyBox.style.display = 'none';
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    class Particle {
+        constructor() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.vx = (Math.random() - 0.5) * 0.5;
+            this.vy = (Math.random() - 0.5) * 0.5;
+            this.size = Math.random() * 2;
+        }
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+            if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+        }
+        draw() {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
         }
     }
 
-    async function generateVoice() {
-        const text = document.getElementById('textInput').value;
-        const option = voiceSelect.options[voiceSelect.selectedIndex];
-        const voiceId = option.value;
-        const provider = option.getAttribute('data-provider');
-        const userApiKey = document.getElementById('userApiKey').value;
+    // Inisialisasi Partikel
+    for (let i = 0; i < 70; i++) particles.push(new Particle());
 
-        if (!text) return alert("Mohon isi teksnya dulu kawan!");
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < particles.length; i++) {
+            particles[i].update();
+            particles[i].draw();
+            // Garis penghubung (Angel Lines)
+            for (let j = i; j < particles.length; j++) {
+                const dx = particles[i].x - particles[j].x;
+                const dy = particles[i].y - particles[j].y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < 150) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = `rgba(0, 210, 255, ${1 - distance / 150})`;
+                    ctx.lineWidth = 0.5;
+                    ctx.moveTo(particles[i].x, particles[i].y);
+                    ctx.lineTo(particles[j].x, particles[j].y);
+                    ctx.stroke();
+                }
+            }
+        }
+        requestAnimationFrame(animate);
+    }
+    animate();
+
+    // --- 2. LOGIKA UTAMA APLIKASI ---
+    const voiceSelect = document.getElementById('voiceSelect');
+    const apiKeySection = document.getElementById('apiKeySection');
+    const textInput = document.getElementById('textInput');
+    const charCount = document.getElementById('charCount');
+
+    // Cek Provider (Google vs ElevenLabs)
+    function checkVoiceType() {
+        const selectedOption = voiceSelect.options[voiceSelect.selectedIndex];
+        const provider = selectedOption.getAttribute('data-provider');
+        
+        if (provider === 'elevenlabs') {
+            apiKeySection.style.display = 'block';
+            // Load key jika pernah disimpan
+            const savedKey = localStorage.getItem('user_eleven_key');
+            if (savedKey) document.getElementById('userApiKey').value = savedKey;
+        } else {
+            apiKeySection.style.display = 'none';
+        }
+    }
+    
+    // Auto Update Char Count
+    textInput.addEventListener('input', () => {
+        charCount.innerText = textInput.value.length;
+    });
+
+    // Inisialisasi awal
+    window.onload = () => {
+        checkVoiceType();
+    };
+
+    async function generateAudio() {
+        const text = textInput.value;
+        const selectedOption = voiceSelect.options[voiceSelect.selectedIndex];
+        const voiceId = selectedOption.value;
+        const provider = selectedOption.getAttribute('data-provider');
+        const userKey = document.getElementById('userApiKey').value;
+
+        if (!text) return alert("Mohon isi teks terlebih dahulu.");
+        
+        // Simpan key user ke LocalStorage agar tidak hilang saat refresh
+        if (provider === 'elevenlabs' && userKey) {
+            localStorage.setItem('user_eleven_key', userKey);
+        }
 
         const btn = document.getElementById('generateBtn');
-        const status = document.getElementById('status');
+        const statusText = document.getElementById('statusText');
         const resultArea = document.getElementById('resultArea');
-
+        
+        // UI Loading State
         btn.disabled = true;
-        btn.innerText = "⏳ Sedang Meracik...";
-        status.innerText = provider === 'edge' ? "Menghubungi Server Unlimited..." : "Menghubungi ElevenLabs...";
+        btn.innerText = "⏳ Sedang Memproses...";
+        statusText.innerText = provider === 'google' 
+            ? "Menghubungi Server Google (Gratis)..." 
+            : "Menghubungi Server ElevenLabs (Premium)...";
         resultArea.style.display = 'none';
 
         try {
             const response = await fetch('/api/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    text: text, 
-                    voice_id: voiceId, 
+                body: JSON.stringify({
+                    text: text,
+                    voice_id: voiceId,
                     provider: provider,
-                    user_api_key: userApiKey
+                    user_api_key: userKey // Dikirim hanya jika diisi
                 })
             });
 
             if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || "Gagal memproses.");
+                const errData = await response.json();
+                throw new Error(errData.error || "Gagal generate");
             }
 
             const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
+            const audioUrl = URL.createObjectURL(blob);
 
-            document.getElementById('audioPlayer').src = url;
-            document.getElementById('audioPlayer').play();
-            document.getElementById('downloadLink').href = url;
-            document.getElementById('downloadLink').download = `Audio-${Date.now()}.mp3`;
+            const audioPlayer = document.getElementById('audioPlayer');
+            const downloadLink = document.getElementById('downloadLink');
+            
+            audioPlayer.src = audioUrl;
+            audioPlayer.play();
+            
+            downloadLink.href = audioUrl;
+            downloadLink.download = `CrystalVoice-${Date.now()}.mp3`;
 
             resultArea.style.display = 'block';
-            status.innerText = "✅ Berhasil!";
-        } catch (e) {
-            alert("Error: " + e.message);
-            status.innerText = "❌ Gagal: " + e.message;
+            statusText.innerText = "✅ Selesai! Suara siap didengar.";
+
+        } catch (error) {
+            alert("Error: " + error.message);
+            statusText.innerText = "❌ Gagal: " + error.message;
         } finally {
             btn.disabled = false;
-            btn.innerText = "✨ GENERATE SUARA";
+            btn.innerText = "✨ Generate Voice";
         }
     }
 </script>
