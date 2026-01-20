@@ -1,144 +1,135 @@
 // api/generate.js
-// Menggunakan 'require' agar kompatibel penuh dengan Vercel & Node.js
 const axios = require('axios');
-const { MsEdgeTTS, OUTPUT_FORMAT } = require('ms-edge-tts');
+const WebSocket = require('ws');
+const { v4: uuidv4 } = require('uuid');
 
-module.exports = async (req, res) => {
-  // 1. KEAMANAN & VALIDASI
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
-  }
+// --- FUNGSI RAHASIA: KONEKSI LANGSUNG KE EDGE TTS ---
+async function generateEdgeAudio(text, voiceId) {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket('wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4');
+    const requestId = uuidv4();
+    let audioData = [];
 
-  const { text, voice_id, provider, user_api_key } = req.body;
+    ws.on('open', () => {
+      // 1. Kirim Konfigurasi Speech
+      const configMsg = {
+        context: {
+          synthesis: {
+            audio: {
+              metadataoptions: { sentenceBoundaryEnabled: "false", wordBoundaryEnabled: "false" },
+              outputFormat: "audio-24khz-48kbitrate-mono-mp3"
+            }
+          }
+        }
+      };
+      ws.send(`X-Timestamp:${new Date().toString()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n${JSON.stringify(configMsg)}`);
 
-  if (!text) {
-    return res.status(400).json({ error: 'Teks tidak boleh kosong.' });
-  }
+      // 2. Kirim SSML (Teks yang mau dibaca)
+      // Format SSML standar Microsoft
+      const ssml = `
+        <speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>
+          <voice name='${voiceId}'>
+            <prosody pitch='+0Hz' rate='+0%'>${text}</prosody>
+          </voice>
+        </speak>
+      `;
+      ws.send(`X-Timestamp:${new Date().toString()}\r\nContent-Type:application/ssml+xml\r\nX-RequestId:${requestId}\r\nPath:ssml\r\n\r\n${ssml}`);
+    });
 
-  try {
-    // ============================================================
-    // OPSI A: PROVIDER GRATIS (EDGE TTS - MICROSOFT)
-    // ============================================================
-    if (provider === 'edge') {
-      console.log(`🎤 Mode: Edge TTS (Gratis Unlimited) - Voice: ${voice_id}`);
-      
-      const tts = new MsEdgeTTS();
-      
-      // Menggunakan format audio kualitas tinggi
-      await tts.setMetadata(voice_id, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-      
-      // Generate Stream
-      const filePath = await tts.toStream(text);
-      
-      // Kirim langsung ke frontend sebagai stream audio
-      res.setHeader('Content-Type', 'audio/mpeg');
-      return filePath.pipe(res);
-    }
-
-    // ============================================================
-    // OPSI B: PROVIDER PREMIUM (ELEVENLABS)
-    // ============================================================
-    else if (provider === 'elevenlabs') {
-      console.log("🎤 Mode: ElevenLabs Premium");
-
-      // --- LOGIKA MENENTUKAN KUNCI API ---
-      let apiKeys = [];
-
-      // Skenario 1: User bawa kunci sendiri (Prioritas Utama)
-      if (user_api_key && user_api_key.length > 10) {
-        console.log("👉 Menggunakan API Key dari User.");
-        apiKeys = [user_api_key];
-      } 
-      // Skenario 2: User tidak bawa kunci, gunakan cadangan Server (Multi-Key Rotation)
-      else {
-        console.log("👉 Menggunakan Multi-Key Rotation dari Server.");
-        try {
-          apiKeys = JSON.parse(process.env.ELEVENLABS_KEYS || '[]');
-        } catch (e) {
-          console.error("Format ENV Error:", e);
+    ws.on('message', (data, isBinary) => {
+      if (isBinary) {
+        // Cari header binary untuk memisahkan metadata dan audio murni
+        const separator = "Path:audio\r\n";
+        const textData = data.toString('latin1'); // Decode header
+        
+        if (textData.includes(separator)) {
+            // Ambil data setelah header
+            const headerIndex = textData.indexOf(separator) + separator.length;
+            const audioPart = data.slice(headerIndex);
+            audioData.push(audioPart);
         }
       }
+    });
 
-      if (apiKeys.length === 0) {
-        return res.status(401).json({ 
-          error: "Tidak ada API Key tersedia. Masukkan Key Anda sendiri atau atur server keys." 
-        });
+    ws.on('close', () => {
+      // Gabungkan semua potongan audio jadi satu buffer
+      if (audioData.length > 0) {
+        resolve(Buffer.concat(audioData));
+      } else {
+        reject(new Error("Koneksi ditutup tanpa menghasilkan audio."));
+      }
+    });
+
+    ws.on('error', (err) => {
+      reject(err);
+    });
+  });
+}
+
+// --- HANDLER UTAMA VERCEL ---
+module.exports = async (req, res) => {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+
+  const { text, voice_id, provider, user_api_key } = req.body;
+  if (!text) return res.status(400).json({ error: 'Teks kosong.' });
+
+  try {
+    // ==========================================
+    // OPSI A: EDGE TTS (GRATIS UNLIMITED)
+    // ==========================================
+    if (provider === 'edge') {
+      console.log(`🎤 Edge TTS: ${voice_id}`);
+      const audioBuffer = await generateEdgeAudio(text, voice_id);
+      
+      res.setHeader('Content-Type', 'audio/mpeg');
+      return res.send(audioBuffer);
+    }
+
+    // ==========================================
+    // OPSI B: ELEVENLABS (PREMIUM)
+    // ==========================================
+    else if (provider === 'elevenlabs') {
+      console.log("🎤 ElevenLabs Premium");
+
+      // Cek Key User vs Server
+      let apiKeys = [];
+      if (user_api_key && user_api_key.length > 10) {
+        apiKeys = [user_api_key];
+      } else {
+        try { apiKeys = JSON.parse(process.env.ELEVENLABS_KEYS || '[]'); } catch (e) {}
       }
 
-      // --- LOOPING / ROTASI KUNCI (ESTAFET SYSTEM) ---
-      let lastError = null;
+      if (apiKeys.length === 0) return res.status(401).json({ error: "API Key Kosong." });
 
+      // Rotasi Key
       for (let i = 0; i < apiKeys.length; i++) {
-        const currentKey = apiKeys[i];
-        const isUserKey = (apiKeys.length === 1 && user_api_key); // Cek apakah ini key user
-        
-        console.log(`🔄 Mencoba Request ElevenLabs... (Percobaan ${i + 1})`);
-
+        const key = apiKeys[i];
         try {
-          const response = await axios.post(
+          const resp = await axios.post(
             `https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`,
             {
               text: text,
-              model_id: "eleven_multilingual_v2", // Model terbaik Bahasa Indonesia
-              voice_settings: {
-                // SETTINGAN KHUSUS AGAR REALISTIS & MANUSIAWI
-                stability: 0.40,       // Agak rendah (0.4) agar lebih emosional/tidak robot
-                similarity_boost: 0.75,// Menjaga kemiripan karakter suara
-                style: 0.50,           // (V2 Only) Menambah gaya bicara natural
-                use_speaker_boost: true // Meningkatkan volume dan kejelasan
-              }
+              model_id: "eleven_multilingual_v2",
+              voice_settings: { stability: 0.40, similarity_boost: 0.75, style: 0.50, use_speaker_boost: true }
             },
             {
-              headers: {
-                'xi-api-key': currentKey,
-                'Content-Type': 'application/json'
-              },
-              responseType: 'arraybuffer' // PENTING: Terima sebagai file audio
+              headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
+              responseType: 'arraybuffer'
             }
           );
-
-          // JIKA SUKSES
-          console.log("✅ Berhasil Generate via ElevenLabs!");
           res.setHeader('Content-Type', 'audio/mpeg');
-          return res.send(response.data);
-
-        } catch (error) {
-          // JIKA GAGAL
-          const status = error.response?.status;
-          const message = error.response?.data?.detail?.message || error.message;
-          console.error(`❌ Gagal. Status: ${status}. Pesan: ${message}`);
-          
-          lastError = message;
-
-          // Jika ini Key User sendiri, jangan rotasi, langsung error
-          if (isUserKey) {
-             return res.status(status || 500).json({ error: "API Key Anda bermasalah/habis kuota." });
-          }
-
-          // Jika Key Server Habis Kuota (429) atau Mati (401), lanjut loop ke key berikutnya
-          if (status === 401 || status === 429) {
-            continue; 
-          } else {
-            // Error lain (misal teks kepanjangan), stop loop
-            return res.status(status || 500).json({ error: "ElevenLabs Error: " + message });
-          }
+          return res.send(resp.data);
+        } catch (err) {
+          if (i === apiKeys.length - 1) throw err; // Lempar error jika ini kunci terakhir
+          // Jika tidak, lanjut loop (continue)
         }
       }
-
-      // Jika loop selesai tapi tidak ada yang berhasil
-      return res.status(503).json({ 
-        error: "Semua kuota Server habis. Silakan gunakan API Key Anda sendiri.",
-        details: lastError
-      });
-    }
-    
-    // Jika Provider tidak dikenali
-    else {
-      return res.status(400).json({ error: "Provider suara tidak valid." });
+    } else {
+      return res.status(400).json({ error: "Provider tidak valid" });
     }
 
-  } catch (globalError) {
-    console.error("Critical Error:", globalError);
-    return res.status(500).json({ error: "Internal Server Error: " + globalError.message });
+  } catch (error) {
+    console.error("Error:", error.message);
+    return res.status(500).json({ error: "Gagal memproses: " + error.message });
   }
 };
