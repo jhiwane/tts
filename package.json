@@ -1,8 +1,9 @@
 {
-  "name": "tts-ultimate-luxury",
-  "version": "2.0.0",
+  "name": "tts-ultimate-fixed",
+  "version": "2.1.0",
   "dependencies": {
     "axios": "^1.6.0",
-    "ms-edge-tts": "^1.4.2" 
+    "ws": "^8.16.0",
+    "uuid": "^9.0.1"
   }
 }
