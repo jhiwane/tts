@@ -3,103 +3,344 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TTS Unlimited - Multi Key</title>
+    <title>Voice Studio Pro - Ultimate</title>
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f4f4f4; }
-        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #333; }
-        textarea { width: 100%; height: 200px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; margin-bottom: 10px; resize: vertical; box-sizing: border-box; }
-        .controls { display: flex; gap: 10px; margin-bottom: 20px; }
-        select, button { padding: 10px 15px; border-radius: 5px; border: 1px solid #ccc; cursor: pointer; }
-        button { background: #0070f3; color: white; border: none; font-weight: bold; flex-grow: 1; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        button:hover:not(:disabled) { background: #0051a2; }
-        .status { text-align: center; margin-top: 10px; font-size: 0.9em; color: #666; }
-        .audio-container { margin-top: 20px; text-align: center; display: none; }
-        audio { width: 100%; margin-bottom: 10px; }
-        .download-btn { background: #28a745; display: inline-block; text-decoration: none; color: white; padding: 10px 20px; border-radius: 5px; }
+        :root {
+            --primary: #00d2ff;
+            --secondary: #3a7bd5;
+            --glass: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+            --text: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0f0c29;
+            background: linear-gradient(to right, #24243e, #302b63, #0f0c29);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Background Animation Canvas */
+        #canvas-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 40px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            position: relative;
+            z-index: 10;
+        }
+
+        h1 {
+            text-align: center;
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #00d2ff, #928DAB);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #aaa;
+            font-size: 0.9em;
+            margin-bottom: 40px;
+        }
+
+        /* Form Elements */
+        .group { margin-bottom: 25px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #ccc; font-size: 0.9em; }
+
+        select, input, textarea {
+            width: 100%;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            outline: none;
+            transition: 0.3s;
+            box-sizing: border-box;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);
+        }
+
+        /* Toggle API Key Section */
+        #apiKeySection {
+            display: none; /* Default hidden */
+            background: rgba(255, 200, 0, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px dashed rgba(255, 215, 0, 0.3);
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        button {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(45deg, var(--secondary), var(--primary));
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 210, 255, 0.3);
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Audio Player Styling */
+        .result-box {
+            margin-top: 30px;
+            text-align: center;
+            display: none;
+            background: rgba(0,0,0,0.2);
+            padding: 20px;
+            border-radius: 15px;
+        }
+        
+        audio {
+            width: 100%;
+            height: 40px;
+            margin-bottom: 15px;
+        }
+        
+        .download-btn {
+            display: inline-block;
+            text-decoration: none;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            padding: 10px 30px;
+            border-radius: 30px;
+            transition: 0.3s;
+        }
+        
+        .download-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #888;
+        }
     </style>
 </head>
 <body>
 
+<canvas id="canvas-bg"></canvas>
+
 <div class="container">
-    <h1>🔊 Generator Suara AI (Multi-Key)</h1>
-    
-    <div class="controls">
-        <select id="voiceSelect" style="width: 100%; padding: 10px; margin-bottom: 10px;">
-    <option value="pNInz6obpgDQGcFmaJgB">Adam (Deep & Narrator) - Paling Populer 🔥</option>
-    <option value="ErXwobaYiN019Pky1sPO">Antoni (Wibawa & Berita)</option>
-    <option value="TxGEqnHWrfWFTfGW9XjX">Josh (Suara Berat & Lembut)</option>
-    <option value="VR6AewLTigWg4xSOukaG">Arnold (Suara Khas Amerika)</option>
-    <option value="ODq5zmih8GrVes37Dizj">Patrick (Suara Enerjik/Iklan)</option>
+    <h1>Crystal Voice Studio</h1>
+    <p class="subtitle">Next-Gen AI Text to Speech Generator</p>
 
-    <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Narasi Jernih) - Favorit ✨</option>
-    <option value="AZnzlk1XvdvUeBnXmlld">Domi (Kuat & Tegas)</option>
-    <option value="EXAVITQu4vr4xnSDxMaL">Bella (Lembut & Serius)</option>
-    <option value="MF3mGyEYCl7XYWbV9V6O">Elli (Muda & Ceria)</option>
-    <option value="ThT5KcBeYPX3keUQqHPh">Dorothy (Suara Ibu/Tenang)</option>
-</select>
+    <div class="group">
+        <label>Pilih Suara / Voice Model</label>
+        <select id="voiceSelect" onchange="checkVoiceType()">
+            <optgroup label="🔥 GRATIS & UNLIMITED (Realistis)">
+                <option value="id-ID-GadisNeural" data-provider="edge">🇮🇩 Gadis (Cewek Indonesia - Natural)</option>
+                <option value="id-ID-ArdiNeural" data-provider="edge">🇮🇩 Ardi (Cowok Indonesia - Berita)</option>
+                <option value="en-US-JennyNeural" data-provider="edge">🇺🇸 Jenny (English US)</option>
+                <option value="en-US-GuyNeural" data-provider="edge">🇺🇸 Guy (English Male)</option>
+            </optgroup>
+            <optgroup label="💎 PREMIUM (Butuh API Key ElevenLabs)">
+                <option value="pNInz6obpgDQGcFmaJgB" data-provider="elevenlabs">⭐ Adam (Deep Narrator)</option>
+                <option value="21m00Tcm4TlvDq8ikWAM" data-provider="elevenlabs">⭐ Rachel (Clear Voice)</option>
+                <option value="ErXwobaYiN019Pky1sPO" data-provider="elevenlabs">⭐ Antoni (News Anchor)</option>
+            </optgroup>
+        </select>
     </div>
 
-    <textarea id="textInput" placeholder="Tulis atau paste teks panjang di sini (Max 5000 karakter)..."></textarea>
-    <div style="text-align: right; font-size: 12px; color: #888; margin-bottom: 10px;">
-        <span id="charCount">0</span>/5000 Karakter
+    <div id="apiKeySection" class="group">
+        <label>🔑 Masukkan API Key ElevenLabs Anda</label>
+        <input type="password" id="userApiKey" placeholder="sk_... (Paste API Key ElevenLabs Anda disini)">
+        <small style="color: #bbb; display: block; margin-top: 5px;">*Data ini aman dan tidak disimpan di server kami.</small>
     </div>
 
-    <button id="generateBtn" onclick="generateAudio()">🎵 GENERATE SUARA</button>
+    <div class="group">
+        <label>Naskah / Teks</label>
+        <textarea id="textInput" rows="6" placeholder="Ketik sesuatu yang indah di sini..."></textarea>
+        <div style="text-align: right; font-size: 12px; color: #888; margin-top: 5px;">
+            <span id="charCount">0</span> Karakter
+        </div>
+    </div>
+
+    <button id="generateBtn" onclick="generateAudio()">✨ Generate Voice</button>
     <div id="statusText" class="status"></div>
 
-    <div class="audio-container" id="resultArea">
-        <audio id="audioPlayer" controls></audio> <br>
-        <a id="downloadLink" class="download-btn">⬇️ Download MP3</a>
+    <div class="result-box" id="resultArea">
+        <audio id="audioPlayer" controls></audio><br>
+        <a id="downloadLink" class="download-btn" download>⬇ Download MP3</a>
     </div>
 </div>
 
 <script>
-    const textInput = document.getElementById('textInput');
-    const statusText = document.getElementById('statusText');
-    const resultArea = document.getElementById('resultArea');
-    const audioPlayer = document.getElementById('audioPlayer');
-    const charCount = document.getElementById('charCount');
+    // --- 1. ANIMASI LATAR BELAKANG (ANGEL LINES) ---
+    const canvas = document.getElementById("canvas-bg");
+    const ctx = canvas.getContext("2d");
+    let particles = [];
 
-    // 1. LOCAL STORAGE: Load draft saat halaman dibuka
-    window.onload = () => {
-        const savedText = localStorage.getItem('tts_draft');
-        if (savedText) textInput.value = savedText;
-        updateCount();
-    };
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resize);
+    resize();
 
-    // 2. LOCAL STORAGE: Save otomatis saat ngetik
-    textInput.addEventListener('input', () => {
-        localStorage.setItem('tts_draft', textInput.value);
-        updateCount();
-    });
-
-    function updateCount() {
-        charCount.innerText = textInput.value.length;
+    class Particle {
+        constructor() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.vx = (Math.random() - 0.5) * 0.5;
+            this.vy = (Math.random() - 0.5) * 0.5;
+            this.size = Math.random() * 2;
+        }
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+            if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+        }
+        draw() {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
-    // 3. FUNGSI UTAMA GENERATE
+    for (let i = 0; i < 60; i++) particles.push(new Particle());
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < particles.length; i++) {
+            particles[i].update();
+            particles[i].draw();
+            // Garis penghubung (Angel Lines)
+            for (let j = i; j < particles.length; j++) {
+                const dx = particles[i].x - particles[j].x;
+                const dy = particles[i].y - particles[j].y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < 150) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = `rgba(0, 210, 255, ${1 - distance / 150})`;
+                    ctx.lineWidth = 0.5;
+                    ctx.moveTo(particles[i].x, particles[i].y);
+                    ctx.lineTo(particles[j].x, particles[j].y);
+                    ctx.stroke();
+                }
+            }
+        }
+        requestAnimationFrame(animate);
+    }
+    animate();
+
+    // --- 2. LOGIKA UTAMA ---
+    const voiceSelect = document.getElementById('voiceSelect');
+    const apiKeySection = document.getElementById('apiKeySection');
+    const textInput = document.getElementById('textInput');
+    const charCount = document.getElementById('charCount');
+
+    // Cek apakah suara yang dipilih Premium atau Gratis
+    function checkVoiceType() {
+        const selectedOption = voiceSelect.options[voiceSelect.selectedIndex];
+        const provider = selectedOption.getAttribute('data-provider');
+        
+        if (provider === 'elevenlabs') {
+            apiKeySection.style.display = 'block';
+            // Coba ambil key dari local storage kalau pernah simpan
+            const savedKey = localStorage.getItem('user_eleven_key');
+            if (savedKey) document.getElementById('userApiKey').value = savedKey;
+        } else {
+            apiKeySection.style.display = 'none';
+        }
+    }
+    
+    // Auto Update Char Count & Save LocalStorage
+    textInput.addEventListener('input', () => {
+        charCount.innerText = textInput.value.length;
+        localStorage.setItem('saved_text', textInput.value);
+    });
+    
+    // Load saved text
+    window.onload = () => {
+        const savedText = localStorage.getItem('saved_text');
+        if (savedText) textInput.value = savedText;
+        checkVoiceType(); // Run once on load
+    };
+
     async function generateAudio() {
         const text = textInput.value;
-        const voiceId = document.getElementById('voiceSelect').value;
+        const selectedOption = voiceSelect.options[voiceSelect.selectedIndex];
+        const voiceId = selectedOption.value;
+        const provider = selectedOption.getAttribute('data-provider');
+        const userKey = document.getElementById('userApiKey').value;
 
-        if (!text) return alert("Teks tidak boleh kosong!");
-        if (text.length > 5000) return alert("Teks terlalu panjang! Maksimal 5000 karakter.");
+        if (!text) return alert("Mohon isi teks terlebih dahulu.");
+        
+        // Simpan key user di browser biar gak ngetik ulang
+        if (provider === 'elevenlabs' && userKey) {
+            localStorage.setItem('user_eleven_key', userKey);
+        }
 
-        // UI Loading
         const btn = document.getElementById('generateBtn');
+        const statusText = document.getElementById('statusText');
+        const resultArea = document.getElementById('resultArea');
+        
         btn.disabled = true;
-        btn.innerText = "⏳ Sedang Memproses (Mencari Kunci Aktif)...";
-        statusText.innerText = "Sistem sedang mencoba beberapa akun API secara bergantian...";
+        btn.innerText = "⏳ Sedang Meracik Suara...";
+        statusText.innerText = provider === 'edge' ? "Menggunakan Server Gratis (Unlimited)..." : "Menghubungi ElevenLabs Premium...";
         resultArea.style.display = 'none';
 
         try {
-            // Panggil API Vercel kita sendiri
             const response = await fetch('/api/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text, voice_id: voiceId })
+                body: JSON.stringify({
+                    text: text,
+                    voice_id: voiceId,
+                    provider: provider,
+                    user_api_key: userKey // Dikirim hanya jika ada
+                })
             });
 
             if (!response.ok) {
@@ -107,27 +348,27 @@
                 throw new Error(errData.error || "Gagal generate");
             }
 
-            // Proses Audio Blob
             const blob = await response.blob();
             const audioUrl = URL.createObjectURL(blob);
 
-            // Tampilkan Hasil
+            const audioPlayer = document.getElementById('audioPlayer');
+            const downloadLink = document.getElementById('downloadLink');
+            
             audioPlayer.src = audioUrl;
             audioPlayer.play();
             
-            const downloadLink = document.getElementById('downloadLink');
             downloadLink.href = audioUrl;
-            downloadLink.download = `voice-${Date.now()}.mp3`;
+            downloadLink.download = `CrystalVoice-${Date.now()}.mp3`;
 
             resultArea.style.display = 'block';
-            statusText.innerText = "✅ Berhasil! Audio siap diputar.";
+            statusText.innerText = "✅ Selesai! Suara siap didengar.";
 
         } catch (error) {
             alert("Error: " + error.message);
             statusText.innerText = "❌ Gagal: " + error.message;
         } finally {
             btn.disabled = false;
-            btn.innerText = "🎵 GENERATE SUARA";
+            btn.innerText = "✨ Generate Voice";
         }
     }
 </script>
