@@ -55,7 +55,7 @@ module.exports = async (req, res) => {
       // Prioritas 1: Gunakan API Key milik User sendiri (jika diisi)
       if (user_api_key && user_api_key.length > 10) {
         console.log("👉 Menggunakan API Key User.");
-        apiKeys = [user_api_key];
+        apiKeys = [sk_4864bd6f9c07410dbe4892fee904f32b6385408576fbd131];
       } 
       // Prioritas 2: Gunakan API Key Server (Multi-Key Rotation)
       else {
