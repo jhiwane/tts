@@ -45,7 +45,7 @@ module.exports = async (req, res) => {
       console.log("🎤 Mode: ElevenLabs Premium");
 
       // PERBAIKAN 1: Teks API Key WAJIB menggunakan tanda kutip ("")
-      let apiKeys = ["sk_4864bd6f9c07410dbe4892fee904f32b6385408576fbd131"];
+      let apiKeys = ["sk_9c29eb0b3c0a1e9777e6511b979e85b80992029a70d4b72c"];
 
       if (user_api_key && user_api_key.length > 10) {
         console.log("👉 Menggunakan API Key User.");
