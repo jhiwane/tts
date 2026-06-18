@@ -70,7 +70,7 @@
         .group { margin-bottom: 25px; }
         label { display: block; margin-bottom: 8px; font-weight: 600; color: #ccc; font-size: 0.9em; }
 
-        select, input, textarea {
+        select, input[type="password"], textarea {
             width: 100%;
             padding: 15px;
             background: rgba(0, 0, 0, 0.3);
@@ -83,7 +83,7 @@
             box-sizing: border-box;
         }
 
-        select:focus, input:focus, textarea:focus {
+        select:focus, input[type="password"]:focus, textarea:focus {
             border-color: var(--primary);
             box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);
         }
@@ -94,9 +94,61 @@
             padding: 10px;
         }
 
+        /* Sliders */
+        .slider-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .slider-box {
+            flex: 1;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+            color: #bbb;
+        }
+
+        .slider-value {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
         /* Toggle API Key Section */
         #apiKeySection {
-            display: none; /* Default hidden */
+            display: none;
             background: rgba(255, 200, 0, 0.05);
             padding: 20px;
             border-radius: 10px;
@@ -171,7 +223,6 @@
             margin-top: 15px;
             font-size: 0.9em;
             color: #888;
-            font-weight: bold;
         }
     </style>
 </head>
@@ -186,30 +237,43 @@
     <div class="group">
         <label>Pilih Suara / Voice Model</label>
         <select id="voiceSelect" onchange="checkVoiceType()">
-            <optgroup label="🚀 GRATIS (GOOGLE) ">
-                <option value="id" data-provider="google">🇮🇩 Indonesia (Mbak Google)</option>
-                <option value="en" data-provider="google">🇺🇸 Inggris (US)</option>
-                <option value="jw" data-provider="google">🟤 Jawa (Javanese)</option>
-                <option value="su" data-provider="google">🟢 Sunda (Sundanese)</option>
+            <optgroup label="💎 PREMIUM ELEVENLABS (REALISTIS)">
+                <option value="pNInz6obpgDQGcFmaJgB" data-provider="elevenlabs">👨 Adam (Pria - Bahasa Indonesia)</option>
+                <option value="ErXwobaYiN019PkySvjV" data-provider="elevenlabs">👨 Antoni (Pria Muda - Bahasa Indonesia)</option>
+                <option value="EXAVITQu4vr4xnSDxMaL" data-provider="elevenlabs">👩 Bella (Perempuan - English Native)</option>
             </optgroup>
 
-            <optgroup label="💎 ELEVENLABS (100% AMAN UNTUK AKUN GRATIS) ">
-                <!-- Suara Pria (Paling Bagus untuk Indo) -->
-                <option value="pNInz6obpgDQGcFmaJgB" data-provider="elevenlabs">👨 Adam (Pria Suara Dalam / Berwibawa)</option>
-                <option value="ErXwobaYiN019PkySvjV" data-provider="elevenlabs">👨 Antoni (Pria Muda / Ramah)</option>
-
-                <!-- Suara Perempuan (Terbaik dari Premade) -->
-                <option value="21m00Tcm4TlvDq8ikWAM" data-provider="elevenlabs">👩 Rachel (Perempuan Kalem / Narasi)</option>
-                <option value="AZnzlk1XvdvUeBnXmlld" data-provider="elevenlabs">👩 Domi (Perempuan Ceria & Emosional)</option>
+            <optgroup label="🚀 GRATIS (GOOGLE FALLBACK)">
+                <option value="id" data-provider="google">🇮🇩 Indonesia (Mbak Google)</option>
+                <option value="en" data-provider="google">🇺🇸 Inggris (US)</option>
             </optgroup>
         </select>
     </div>
 
+    <!-- PENGATURAN SUARA (PITCH & SPEED) -->
+    <div class="slider-container">
+        <div class="slider-box">
+            <div class="slider-header">
+                <span>Kecepatan (Tempo)</span>
+                <span class="slider-value" id="speedVal">1.0x</span>
+            </div>
+            <input type="range" id="speedSlider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateSliders()">
+        </div>
+        <div class="slider-box">
+            <div class="slider-header">
+                <span>Pita Suara (Stabilitas)</span>
+                <span class="slider-value" id="pitchVal">Normal</span>
+            </div>
+            <!-- Menggunakan ini untuk merubah karakter / stabilitas AI di backend (0.1 - 1.0) -->
+            <input type="range" id="pitchSlider" min="0.1" max="1.0" step="0.1" value="0.5" oninput="updateSliders()">
+        </div>
+    </div>
+
     <div id="apiKeySection" class="group">
-        <label>🔑 API Key ElevenLabs (Pribadi)</label>
-        <input type="password" id="userApiKey" placeholder="sk_... (Boleh dikosongkan)">
+        <label>🔑 API Key ElevenLabs (Opsional)</label>
+        <input type="password" id="userApiKey" placeholder="sk_... (Biarkan kosong jika ingin pakai Kuota Server Gratis)">
         <small style="color: #bbb; display: block; margin-top: 5px;">
-            *Biarkan <strong>KOSONG</strong> jika ingin menggunakan kumpulan saldo dari Server (Sistem Estafet). Isi jika ingin pakai kuota pribadimu.
+            *Jika kosong, sistem akan mencoba menggunakan akun Estafet Vercel.
         </small>
     </div>
 
@@ -265,7 +329,6 @@
         }
     }
 
-    // Inisialisasi Partikel
     for (let i = 0; i < 70; i++) particles.push(new Particle());
 
     function animate() {
@@ -273,7 +336,6 @@
         for (let i = 0; i < particles.length; i++) {
             particles[i].update();
             particles[i].draw();
-            // Garis penghubung (Angel Lines)
             for (let j = i; j < particles.length; j++) {
                 const dx = particles[i].x - particles[j].x;
                 const dy = particles[i].y - particles[j].y;
@@ -297,16 +359,27 @@
     const apiKeySection = document.getElementById('apiKeySection');
     const textInput = document.getElementById('textInput');
     const charCount = document.getElementById('charCount');
-    const statusText = document.getElementById('statusText');
+    const speedSlider = document.getElementById('speedSlider');
+    const pitchSlider = document.getElementById('pitchSlider');
 
-    // Cek Provider (Google vs ElevenLabs)
+    // Update Label Slider
+    function updateSliders() {
+        document.getElementById('speedVal').innerText = parseFloat(speedSlider.value).toFixed(1) + "x";
+        
+        let pitchText = "Normal";
+        let pitchVal = parseFloat(pitchSlider.value);
+        if (pitchVal < 0.4) pitchText = "Sangat Ekspresif";
+        else if (pitchVal > 0.7) pitchText = "Datar/Kaku";
+        document.getElementById('pitchVal').innerText = pitchText;
+    }
+
+    // Cek Provider
     function checkVoiceType() {
         const selectedOption = voiceSelect.options[voiceSelect.selectedIndex];
         const provider = selectedOption.getAttribute('data-provider');
         
         if (provider === 'elevenlabs') {
             apiKeySection.style.display = 'block';
-            // Load key jika pernah disimpan
             const savedKey = localStorage.getItem('user_eleven_key');
             if (savedKey) document.getElementById('userApiKey').value = savedKey;
         } else {
@@ -314,46 +387,42 @@
         }
     }
     
-    // Auto Update Char Count
     textInput.addEventListener('input', () => {
         charCount.innerText = textInput.value.length;
     });
 
-    // Inisialisasi awal
     window.onload = () => {
         checkVoiceType();
+        updateSliders();
     };
 
     async function generateAudio() {
-        const text = textInput.value.trim();
+        const text = textInput.value;
         const selectedOption = voiceSelect.options[voiceSelect.selectedIndex];
         const voiceId = selectedOption.value;
         const provider = selectedOption.getAttribute('data-provider');
-        const userKey = document.getElementById('userApiKey').value.trim();
+        const userKey = document.getElementById('userApiKey').value;
+        const speedValue = parseFloat(speedSlider.value);
+        const pitchValue = parseFloat(pitchSlider.value);
 
         if (!text) {
-            statusText.style.color = '#ff6b6b';
-            statusText.innerText = "❌ Mohon isi teks narasi Anda terlebih dahulu.";
+            document.getElementById('statusText').innerText = "❌ Mohon isi teks terlebih dahulu.";
+            document.getElementById('statusText').style.color = "#ff6b6b";
             return;
         }
         
-        // Simpan key user ke LocalStorage agar tidak hilang saat refresh
         if (provider === 'elevenlabs' && userKey) {
             localStorage.setItem('user_eleven_key', userKey);
-        } else if (!userKey) {
-            localStorage.removeItem('user_eleven_key');
         }
 
         const btn = document.getElementById('generateBtn');
+        const statusText = document.getElementById('statusText');
         const resultArea = document.getElementById('resultArea');
         
-        // UI Loading State
         btn.disabled = true;
         btn.innerText = "⏳ Sedang Memproses...";
-        statusText.style.color = '#00d2ff';
-        statusText.innerText = provider === 'google' 
-            ? "Menghubungi Server Google (Gratis)..." 
-            : "Menghubungi Server (Mencari Saldo Tersedia)...";
+        statusText.innerText = "Membuat Mahakarya Suara...";
+        statusText.style.color = "#00d2ff";
         resultArea.style.display = 'none';
 
         try {
@@ -364,13 +433,15 @@
                     text: text,
                     voice_id: voiceId,
                     provider: provider,
-                    user_api_key: userKey // Dikirim hanya jika diisi
+                    user_api_key: userKey,
+                    // Mengirimkan nilai slider ke backend jika dibutuhkan (sebagai stabilitas)
+                    stability: pitchValue 
                 })
             });
 
             if (!response.ok) {
                 const errData = await response.json();
-                throw new Error(errData.error || "Gagal generate audio");
+                throw new Error(errData.error || "Gagal generate");
             }
 
             const blob = await response.blob();
@@ -380,18 +451,21 @@
             const downloadLink = document.getElementById('downloadLink');
             
             audioPlayer.src = audioUrl;
+            
+            // Mengaplikasikan pengaturan Kecepatan langsung ke Audio Player
+            audioPlayer.playbackRate = speedValue;
             audioPlayer.play();
             
             downloadLink.href = audioUrl;
             downloadLink.download = `CrystalVoice-${Date.now()}.mp3`;
 
             resultArea.style.display = 'block';
-            statusText.style.color = '#34a853';
-            statusText.innerText = "✅ Selesai! Suara siap didengar.";
+            statusText.innerText = `✅ Selesai! (Diputar dalam mode Kecepatan ${speedValue}x)`;
+            statusText.style.color = "#34a853";
 
         } catch (error) {
-            statusText.style.color = '#ff6b6b';
-            statusText.innerText = "❌ " + error.message;
+            statusText.innerText = "❌ Gagal: " + error.message;
+            statusText.style.color = "#ff6b6b";
         } finally {
             btn.disabled = false;
             btn.innerText = "✨ Generate Voice";
