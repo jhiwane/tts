@@ -130,6 +130,7 @@
             background: #555;
             cursor: not-allowed;
             transform: none;
+            box-shadow: none;
         }
 
         /* Audio Player Styling */
@@ -170,6 +171,7 @@
             margin-top: 15px;
             font-size: 0.9em;
             color: #888;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -184,24 +186,27 @@
     <div class="group">
         <label>Pilih Suara / Voice Model</label>
         <select id="voiceSelect" onchange="checkVoiceType()">
-            <optgroup label="🚀 GRATIS ">
+            <optgroup label="🚀 GRATIS (GOOGLE) ">
                 <option value="id" data-provider="google">🇮🇩 Indonesia (Mbak Google)</option>
                 <option value="en" data-provider="google">🇺🇸 Inggris (US)</option>
                 <option value="jw" data-provider="google">🟤 Jawa (Javanese)</option>
                 <option value="su" data-provider="google">🟢 Sunda (Sundanese)</option>
             </optgroup>
 
-            <optgroup label="💎 PREMIUM ">
-                <option value="pNInz6obpgDQGcFmaJgB" data-provider="elevenlabs">👨 Adam</option>
-                <option value="Xihf7Pm57bfxhZVwYtDM" data-provider="elevenlabs">👩 istiqomah</option>
-                <option value="RWiGLY9uXI70QL540WNd" data-provider="elevenlabs">👨 putra</option>
-                <option value="TxGEqnHWrfWFTfGW9XjX" data-provider="elevenlabs">👨 Josh (Deep & Soft)</option>
-                <option value="VR6AewLTigWg4xSOukaG" data-provider="elevenlabs">👨 Arnold (American Voice)</option>
-                <option value="gmnazjXOFoOcWA59sd5m" data-provider="elevenlabs">👩 kira</option>
-                <option value="WQ4h6sgS9p2XXvLsESBT" data-provider="elevenlabs">👩 selina</option>
-                <option value="MF3mGyEYCl7XYWbV9V6O" data-provider="elevenlabs">👩 Elli (Young & Energetic)</option>
-                <option value="ThT5KcBeYPX3keUQqHPh" data-provider="elevenlabs">👩 Dorothy (British/Polite)</option>
-                <option value="ODq5zmih8GrVes37Dizj" data-provider="elevenlabs">👨 Patrick (Energetic Shout)</option>
+            <optgroup label="💎 ELEVENLABS (AMAN UNTUK AKUN GRATIS) ">
+                <!-- Anak & Perempuan -->
+                <option value="jBpfuIE2acCO8z3wKNLl" data-provider="elevenlabs">👧 Gigi (Anak Perempuan / Sangat Imut)</option>
+                <option value="EXAVITQu4vr4xnSDxMaL" data-provider="elevenlabs">👩 Bella (Perempuan Lembut / Kalem)</option>
+                <option value="AZnzlk1XvdvUeBnXmlld" data-provider="elevenlabs">👩 Domi (Perempuan Muda / Ceria & Enerjik)</option>
+                <option value="MF3mGyEYCl7XYWbV9V6O" data-provider="elevenlabs">👩 Elli (Perempuan Muda / Storytelling Emosional)</option>
+                <option value="21m00Tcm4TlvDq8ikWAM" data-provider="elevenlabs">👩 Rachel (Perempuan Dewasa / Narasi Natural)</option>
+                <option value="ThT5KcBeYPX3keUQqHPh" data-provider="elevenlabs">👩 Dorothy (Perempuan Dewasa / Buku Anak)</option>
+                
+                <!-- Pria -->
+                <option value="pNInz6obpgDQGcFmaJgB" data-provider="elevenlabs">👨 Adam (Pria Suara Dalam / Berwibawa)</option>
+                <option value="TxGEqnHWrfWFTfGW9XjX" data-provider="elevenlabs">👨 Josh (Pria Suara Lembut / Dokumenter)</option>
+                <option value="ErXwobaYiN019PkySvjV" data-provider="elevenlabs">👨 Antoni (Pria Muda / Ramah)</option>
+                <option value="ODq5zmih8GrVes37Dizj" data-provider="elevenlabs">👨 Patrick (Pria Enerjik / Bersemangat)</option>
             </optgroup>
         </select>
     </div>
@@ -210,7 +215,7 @@
         <label>🔑 API Key ElevenLabs (Opsional)</label>
         <input type="password" id="userApiKey" placeholder="sk_... (Biarkan kosong jika ingin pakai Kuota Server Gratis)">
         <small style="color: #bbb; display: block; margin-top: 5px;">
-            *Jika kosong, sistem akan mencoba menggunakan akun bersama (Shared Keys).
+            *Masukkan API Key gratis Anda di sini. Suara di atas aman dan tidak akan terkena limit 'Library Voices'.
         </small>
     </div>
 
@@ -298,6 +303,7 @@
     const apiKeySection = document.getElementById('apiKeySection');
     const textInput = document.getElementById('textInput');
     const charCount = document.getElementById('charCount');
+    const statusText = document.getElementById('statusText');
 
     // Cek Provider (Google vs ElevenLabs)
     function checkVoiceType() {
@@ -325,13 +331,17 @@
     };
 
     async function generateAudio() {
-        const text = textInput.value;
+        const text = textInput.value.trim();
         const selectedOption = voiceSelect.options[voiceSelect.selectedIndex];
         const voiceId = selectedOption.value;
         const provider = selectedOption.getAttribute('data-provider');
-        const userKey = document.getElementById('userApiKey').value;
+        const userKey = document.getElementById('userApiKey').value.trim();
 
-        if (!text) return alert("Mohon isi teks terlebih dahulu.");
+        if (!text) {
+            statusText.style.color = '#ff6b6b';
+            statusText.innerText = "❌ Mohon isi teks narasi Anda terlebih dahulu.";
+            return;
+        }
         
         // Simpan key user ke LocalStorage agar tidak hilang saat refresh
         if (provider === 'elevenlabs' && userKey) {
@@ -339,12 +349,12 @@
         }
 
         const btn = document.getElementById('generateBtn');
-        const statusText = document.getElementById('statusText');
         const resultArea = document.getElementById('resultArea');
         
         // UI Loading State
         btn.disabled = true;
         btn.innerText = "⏳ Sedang Memproses...";
+        statusText.style.color = '#00d2ff';
         statusText.innerText = provider === 'google' 
             ? "Menghubungi Server Google (Gratis)..." 
             : "Menghubungi Server ElevenLabs (Premium)...";
@@ -364,7 +374,7 @@
 
             if (!response.ok) {
                 const errData = await response.json();
-                throw new Error(errData.error || "Gagal generate");
+                throw new Error(errData.error || "Gagal generate audio");
             }
 
             const blob = await response.blob();
@@ -380,11 +390,12 @@
             downloadLink.download = `CrystalVoice-${Date.now()}.mp3`;
 
             resultArea.style.display = 'block';
+            statusText.style.color = '#34a853';
             statusText.innerText = "✅ Selesai! Suara siap didengar.";
 
         } catch (error) {
-            alert("Error: " + error.message);
-            statusText.innerText = "❌ Gagal: " + error.message;
+            statusText.style.color = '#ff6b6b';
+            statusText.innerText = "❌ " + error.message;
         } finally {
             btn.disabled = false;
             btn.innerText = "✨ Generate Voice";
